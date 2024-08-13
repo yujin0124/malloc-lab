@@ -77,6 +77,7 @@ static void *find_fit(size_t asize);
 static void place(void *bp, size_t aszie);
 
 void *heap_listp;
+void *prev_search_point;
 
 /* 
  * mm_init - initialize the malloc package.
@@ -91,6 +92,7 @@ int mm_init(void)
     PUT(heap_listp + (2*WSIZE), PACK(DSIZE, 1)); /* Prologue footer */
     PUT(heap_listp + (3*WSIZE), PACK(0, 1)); /* Epilogue header */
     heap_listp += (2*WSIZE);
+    prev_search_point = heap_listp;
 
     /* Extend the empty heap with a free block of CHUNKSIZE bytes */
     if (extend_heap(CHUNKSIZE/WSIZE) == NULL)
@@ -218,18 +220,39 @@ static void *coalesce(void *bp)
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
         bp = PREV_BLKP(bp);
     }
+
+    if(HDRP(bp) <= prev_search_point && prev_search_point <= FTRP(bp)) {
+        prev_search_point = bp;
+    }
     return bp;
 }
 
 static void *find_fit(size_t asize) {
-    void* bp = heap_listp;
+    /* Next fit */
+
+    if(asize <= 0) {
+        return NULL;
+    }
+
+    void* bp = prev_search_point; // 이전 검색이 종료된 지점
 
     while(GET_SIZE(HDRP(bp)) > 0) {
         if(!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= asize) {
+            prev_search_point = bp;
             return bp;
         }
         bp = NEXT_BLKP(bp);
     }
+
+    bp = heap_listp;
+    while(bp < prev_search_point) {
+        if(!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= asize) {
+            prev_search_point = bp;
+            return bp;
+        }
+        bp = NEXT_BLKP(bp);
+    }
+
     return NULL;
 }
 
