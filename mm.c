@@ -220,7 +220,7 @@ static void *coalesce(void *bp)
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
         bp = PREV_BLKP(bp);
     }
-
+    // prev_search_point에 연결로 인한 변경이 생겼다면 반영
     if(HDRP(bp) <= prev_search_point && prev_search_point <= FTRP(bp)) {
         prev_search_point = bp;
     }
@@ -236,6 +236,7 @@ static void *find_fit(size_t asize) {
 
     void* bp = prev_search_point; // 이전 검색이 종료된 지점
 
+    // 이전 검색이 종료된 지점부터 epilogue 블록까지 탐색
     while(GET_SIZE(HDRP(bp)) > 0) {
         if(!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= asize) {
             prev_search_point = bp;
@@ -244,6 +245,7 @@ static void *find_fit(size_t asize) {
         bp = NEXT_BLKP(bp);
     }
 
+    // 처음부터 이전 검색이 종료된 지점까지 탐색
     bp = heap_listp;
     while(bp < prev_search_point) {
         if(!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= asize) {
